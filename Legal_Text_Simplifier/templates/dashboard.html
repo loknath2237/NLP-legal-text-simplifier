@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+    <h2>Legal Document Simplification System</h2>
+    <a href="/logout" class="logout">Logout</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <a class="active">📄 Legal Text Simplification</a>
+        <a href="#" onclick="openHelp()">❓ Help</a>
+        <a href="#" onclick="openAccount()">👤 My Account</a>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content center-content">
+
+        <h1>Welcome to the Dashboard</h1>
+        <p class="subtitle">
+            Paste or upload a legal document below to simplify it using NLP techniques.
+        </p>
+
+        <div class="upload-container">
+            <form method="POST" action="/process" enctype="multipart/form-data">
+
+                <label>Paste Legal Text</label>
+                <textarea name="text"
+                          placeholder="Paste legal document text here..."
+                          readonly
+                          onfocus="this.removeAttribute('readonly')"></textarea>
+
+                <p class="or">OR</p>
+
+                <label>Upload Legal Document (.txt or .pdf)</label>
+                <input type="file" name="document" accept=".txt,.pdf">
+
+                <button type="submit" class="start-btn">
+                    Process Document
+                </button>
+
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===================== -->
+<!-- HELP MODAL -->
+<!-- ===================== -->
+<div id="helpModal" class="help-modal">
+    <div class="help-box">
+        <h3>Legal Help Assistant</h3>
+        <p>Type a legal word and press Enter.</p>
+
+        <input type="text"
+               id="helpInput"
+               placeholder="Enter legal term (e.g. agreement)"
+               autofocus>
+
+        <div id="helpResponse" class="help-response"></div>
+
+        <div class="help-close" onclick="closeHelp()">Close ✖</div>
+    </div>
+</div>
+
+<!-- ===================== -->
+<!-- ACCOUNT MODAL -->
+<!-- ===================== -->
+<div id="accountModal" class="help-modal">
+    <div class="help-box">
+        <h3>My Account</h3>
+        <p>Email:</p>
+        <strong>{{ session['user'] }}</strong>
+        <br><br>
+        <div class="help-close" onclick="closeAccount()">Close ✖</div>
+    </div>
+</div>
+
+<!-- ===================== -->
+<!-- JAVASCRIPT (IMPORTANT) -->
+<!-- ===================== -->
+<script>
+function openHelp() {
+    document.getElementById("helpModal").style.display = "flex";
+    document.getElementById("helpInput").value = "";
+    document.getElementById("helpResponse").innerText = "";
+    document.getElementById("helpInput").focus();
+}
+
+function closeHelp() {
+    document.getElementById("helpModal").style.display = "none";
+}
+
+function openAccount() {
+    document.getElementById("accountModal").style.display = "flex";
+}
+
+function closeAccount() {
+    document.getElementById("accountModal").style.display = "none";
+}
+
+// 🔍 LEGAL DICTIONARY LOOKUP
+document.getElementById("helpInput").addEventListener("keyup", function (e) {
+    if (e.key === "Enter") {
+        const word = this.value.trim();
+        if (!word) return;
+
+        fetch("/legal-help", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ word: word })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("helpResponse").innerText = data.meaning;
+        })
+        .catch(() => {
+            document.getElementById("helpResponse").innerText =
+                "Error fetching definition.";
+        });
+    }
+});
+</script>
+
+</body>
+</html>

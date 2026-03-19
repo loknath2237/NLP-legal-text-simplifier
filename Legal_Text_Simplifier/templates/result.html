@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simplified Legal Explanation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+
+<div class="topbar">
+    <h2>Simplified Legal Explanation</h2>
+    <a href="/dashboard" class="logout">Back to Dashboard</a>
+</div>
+
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <a href="/dashboard">📄 Legal Text Simplification</a>
+
+        <div style="margin-top:20px;">
+            <label style="font-weight:600;color:#5e35b1;">🌐 Select Language</label>
+            <select id="languageSelect"
+                    style="width:100%;padding:10px;border-radius:8px;">
+                <option value="en">English</option>
+                <option value="ta">Tamil</option>
+                <option value="hi">Hindi</option>
+                <option value="fr">French</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content center-content">
+        <div class="upload-container result-card">
+
+            <h2 style="color:#5e35b1;font-size:32px;">Document Summary</h2>
+
+            <p style="font-weight:bold;">
+                This explanation keeps the meaning of the legal document while using simple language.
+            </p>
+
+            <div id="summaryText"
+                 style="white-space:pre-wrap;line-height:1.8;">
+                {{ summary }}
+            </div>
+
+            <!-- READ ALOUD BUTTON -->
+            <button id="readBtn"
+                    class="start-btn"
+                    style="margin-top:25px;"
+                    disabled>
+                🔊 Read Aloud
+            </button>
+
+        </div>
+    </div>
+</div>
+
+<script>
+/* =================================================
+   FIXED MULTI-LANGUAGE READ ALOUD
+================================================= */
+
+// Original English summary
+const originalEnglishSummary = `{{ summary | escape }}`;
+let currentText = originalEnglishSummary;
+
+// Speech variables
+let voices = [];
+let isSpeaking = false;
+
+// Load voices SAFELY
+function loadVoices() {
+    voices = speechSynthesis.getVoices();
+    if (voices.length > 0) {
+        document.getElementById("readBtn").disabled = false;
+    }
+}
+
+// Some browsers load voices async
+speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+// Translation handler
+document.getElementById("languageSelect").addEventListener("change", () => {
+    const lang = languageSelect.value;
+
+    if (lang === "en") {
+        currentText = originalEnglishSummary;
+        summaryText.innerText = originalEnglishSummary;
+        return;
+    }
+
+    fetch("/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: originalEnglishSummary, lang })
+    })
+    .then(res => res.json())
+    .then(data => {
+        currentText = data.translated;
+        summaryText.innerText = data.translated;
+    });
+});
+
+// Read aloud click (GUARANTEED USER GESTURE)
+document.getElementById("readBtn").addEventListener("click", () => {
+    if (!currentText.trim()) return;
+
+    if (isSpeaking) {
+        speechSynthesis.cancel();
+        isSpeaking = false;
+        readBtn.innerText = "🔊 Read Aloud";
+        return;
+    }
+
+    const lang = languageSelect.value;
+    const utterance = new SpeechSynthesisUtterance(currentText);
+
+    // Match voice
+    const voice = voices.find(v => v.lang.toLowerCase().startsWith(lang))
+                 || voices.find(v => v.lang.toLowerCase().startsWith("en"));
+
+    if (voice) utterance.voice = voice;
+
+    utterance.lang = voice ? voice.lang : "en-IN";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => {
+        isSpeaking = false;
+        readBtn.innerText = "🔊 Read Aloud";
+    };
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+
+    isSpeaking = true;
+    readBtn.innerText = "⏹ Stop Reading";
+});
+</script>
+
+</body>
+</html>
